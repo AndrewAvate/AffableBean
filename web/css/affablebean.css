@@ -283,9 +283,9 @@ img {
 .inputField { width: 190px }
 
 #infoBox { 
-    width: 400px;
+    width: 380px;
     height: 100px;
-    padding: 5px 25px 0 460px ;
+    padding: 5px 25px 0 450px ;
 }
 
 #priceBox {

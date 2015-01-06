@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package controller;
 
 import cart.ShoppingCart;
@@ -9,6 +5,7 @@ import entity.Category;
 import entity.Product;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Map;
 import javax.ejb.EJB;
 import javax.servlet.ServletConfig;
@@ -72,7 +69,7 @@ public class ControllerServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         request.setCharacterEncoding("UTF-8");
         userPath = request.getServletPath();
         HttpSession session = request.getSession();
@@ -80,59 +77,68 @@ public class ControllerServlet extends HttpServlet {
         Collection<Product> categoryProducts;
 
         // if category page is requested
-        if (userPath.equals("/category")) {
+        switch (userPath) {
+            case "/category":
+                // get categoryId from request
+                String categoryId = request.getQueryString();
+                if (categoryId != null) {
 
-            // get categoryId from request
-            String categoryId = request.getQueryString();
+                    // get selected category
+                    selectedCategory = categoryFacade.find(Integer.parseInt(categoryId));
+                    // place selected category in request scope
+                    session.setAttribute("selectedCategory", selectedCategory);
 
-            if (categoryId != null) {
+                    // get all products for selected category
+                    categoryProducts = selectedCategory.getProductCollection();
+                    // place category products in request scope
+                    session.setAttribute("categoryProducts", categoryProducts);
+                }
 
-                // get selected category
-                selectedCategory = categoryFacade.find(Integer.parseInt(categoryId));
-                // place selected category in request scope
-                session.setAttribute("selectedCategory", selectedCategory);
+                // if cart page is requested
+                break;
+            case "/viewCart":
+                String clear = request.getParameter("clear");
+                if ((clear != null) && clear.equals("true")) {
 
-                // get all products for selected category
-                categoryProducts = selectedCategory.getProductCollection();
-                // place category products in request scope
-                session.setAttribute("categoryProducts", categoryProducts);
-            }
+                    cart = (ShoppingCart) session.getAttribute("cart");
+                    cart.clear();
+                }
+                userPath = "/cart";
 
-            // if cart page is requested
-        } else if (userPath.equals("/viewCart")) {
-            String clear = request.getParameter("clear");
-
-            if ((clear != null) && clear.equals("true")) {
-
+                // if checkout page is requested
+                break;
+            case "/checkout":
                 cart = (ShoppingCart) session.getAttribute("cart");
-                cart.clear();
-            }
+                // calculate total
+                cart.calculateTotal(surcharge);
 
-            userPath = "/cart";
+                // forward to checkout page and switch to a secure channel
+                // if user switches language
+                break;
+            case "/chooseLanguage":
+                // get language choice
+                String language = request.getParameter("language");
 
-            // if checkout page is requested
-        } else if (userPath.equals("/checkout")) {
-            cart = (ShoppingCart) session.getAttribute("cart");
+                // place in request scope
+                request.setAttribute("language", language);
 
-            // calculate total
-            cart.calculateTotal(surcharge);
+                String userView = (String) session.getAttribute("view");
 
-            // forward to checkout page and switch to a secure channel
-            // if user switches language
-        } else if (userPath.equals("/chooseLanguage")) {
-            // get language choice
-            String language = request.getParameter("language");
+                if ((userView != null)
+                        && (!userView.equals("/index"))) {     // index.jsp exists outside 'view' folder
+                    // so must be forwarded separately
+                    userPath = userView;
+                } else {
 
-            // place in request scope
-            request.setAttribute("language", language);
-
-            // forward request to welcome page
-            try {
-                request.getRequestDispatcher("/index.jsp").forward(request, response);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-            return;
+                    // if previous view is index or cannot be determined, send user to welcome page
+                    try {
+                        request.getRequestDispatcher("/index.jsp").forward(request, response);
+                    } catch (ServletException | IOException ex) {
+                        ex.printStackTrace();
+                    }
+                    return;
+                }
+                break;
 
         }
 
@@ -141,7 +147,7 @@ public class ControllerServlet extends HttpServlet {
 
         try {
             request.getRequestDispatcher(url).forward(request, response);
-        } catch (Exception ex) {
+        } catch (ServletException | IOException ex) {
             ex.printStackTrace();
         }
     }
@@ -165,96 +171,110 @@ public class ControllerServlet extends HttpServlet {
         Validator validator = new Validator();
 
         // if addToCart action is called
-        if (userPath.equals("/addToCart")) {
+        switch (userPath) {
+            case "/addToCart": {
+                // if user is adding item to cart for first time
+                // create cart object and attach it to user session
+                if (cart == null) {
 
-            // if user is adding item to cart for first time
-            // create cart object and attach it to user session
-            if (cart == null) {
+                    cart = new ShoppingCart();
+                    session.setAttribute("cart", cart);
+                }       // get user input from request
+                String productId = request.getParameter("productId");
+                if (!productId.isEmpty()) {
 
-                cart = new ShoppingCart();
-                session.setAttribute("cart", cart);
-            }
-
-            // get user input from request
-            String productId = request.getParameter("productId");
-
-            if (!productId.isEmpty()) {
-
-                Product product = productFacade.find(Integer.parseInt(productId));
-                cart.addItem(product);
-            }
-            userPath = "/category";
-
-            // if updateCart action is called
-        } else if (userPath.equals("/updateCart")) {
-            // get input from request
-            String productId = request.getParameter("productId");
-            String quantity = request.getParameter("quantity");
-            boolean invalidEntry = validator.validateQuantity(productId, quantity);
-
-            if (!invalidEntry) {
-
-                Product product = productFacade.find(Integer.parseInt(productId));
-                cart.update(product, quantity);
-            }
-
-            userPath = "/cart";
-
-            // if purchase action is called
-        } else if (userPath.equals("/purchase")) {
-
-            if (cart != null) {
-
-                // extract user data from request
-                String name = request.getParameter("name");
-                String email = request.getParameter("email");
-                String phone = request.getParameter("phone");
-                String address = request.getParameter("address");
-                String cityRegion = request.getParameter("cityRegion");
-                String ccNumber = request.getParameter("creditcard");
-
-                // validate user data
-                boolean validationErrorFlag = false;
-                validationErrorFlag = validator.validateForm(name, email, phone, address, cityRegion, ccNumber, request);
-
-                // if validation error found, return user to checkout
-                if (validationErrorFlag == true) {
-                    request.setAttribute("validationErrorFlag", validationErrorFlag);
-                    userPath = "/checkout";
-
-                    // otherwise, save order to database
-                } else {
-
-                    int orderId = orderManager.placeOrder(name, email, phone, address, cityRegion, ccNumber, cart);
-
-                    // if order processed successfully send user to confirmation page
-                    if (orderId != 0) {
-
-                        // dissociate shopping cart from session
-                        cart = null;
-
-                        // end session
-                        session.invalidate();
-
-                        // get order details
-                        Map orderMap = orderManager.getOrderDetails(orderId);
-
-                        // place order details in request scope
-                        request.setAttribute("customer", orderMap.get("customer"));
-                        request.setAttribute("products", orderMap.get("products"));
-                        request.setAttribute("orderRecord", orderMap.get("orderRecord"));
-                        request.setAttribute("orderedProducts", orderMap.get("orderedProducts"));
-
-                        userPath = "/confirmation";
-
-                        // otherwise, send back to checkout page and display error
-                    } else {
-                        userPath = "/checkout";
-                        request.setAttribute("orderFailureFlag", true);
-                    }
+                    Product product = productFacade.find(Integer.parseInt(productId));
+                    cart.addItem(product);
                 }
-            }
+                userPath = "/category";
 
+                // if updateCart action is called
+                break;
+            }
+            case "/updateCart": {
+                // get input from request
+                String productId = request.getParameter("productId");
+                String quantity = request.getParameter("quantity");
+                boolean invalidEntry = validator.validateQuantity(productId, quantity);
+                if (!invalidEntry) {
+
+                    Product product = productFacade.find(Integer.parseInt(productId));
+                    cart.update(product, quantity);
+                }
+                userPath = "/cart";
+
+                // if purchase action is called
+                break;
+            }
+            case "/purchase":
+                if (cart != null) {
+
+                    // extract user data from request
+                    String name = request.getParameter("name");
+                    String email = request.getParameter("email");
+                    String phone = request.getParameter("phone");
+                    String address = request.getParameter("address");
+                    String cityRegion = request.getParameter("cityRegion");
+                    String ccNumber = request.getParameter("creditcard");
+
+                    // validate user data
+                    boolean validationErrorFlag;
+                    validationErrorFlag = validator.validateForm(name, email, phone, address, cityRegion, ccNumber, request);
+
+                    // if validation error found, return user to checkout
+                    if (validationErrorFlag) {
+                        request.setAttribute("validationErrorFlag", validationErrorFlag);
+                        userPath = "/checkout";
+
+                        // otherwise, save order to database
+                    } else {
+
+                        int orderId = orderManager.placeOrder(name, email, phone, address, cityRegion, ccNumber, cart);
+
+                        // if order processed successfully send user to confirmation page
+                        if (orderId != 0) {
+
+                            // in case language was set using toggle, get language choice before destroying session
+                            Locale locale = (Locale) session.getAttribute("javax.servlet.jsp.jstl.fmt.locale.session");
+                            String language = "";
+
+                            if (locale != null) {
+
+                                language = (String) locale.getLanguage();
+                            }
+
+                            // dissociate shopping cart from session
+                            cart = null;
+
+                            // end session
+                            session.invalidate();
+
+                            if (!language.isEmpty()) {                       // if user changed language using the toggle,
+                                // reset the language attribute - otherwise
+                                request.setAttribute("language", language);  // language will be switched on confirmation page!
+                            }
+
+                            // get order details
+                            Map orderMap = orderManager.getOrderDetails(orderId);
+
+                            // place order details in request scope
+                            request.setAttribute("customer", orderMap.get("customer"));
+                            request.setAttribute("products", orderMap.get("products"));
+                            request.setAttribute("orderRecord", orderMap.get("orderRecord"));
+                            request.setAttribute("orderedProducts", orderMap.get("orderedProducts"));
+
+                            userPath = "/confirmation";
+
+                            // otherwise, send back to checkout page and display error
+                        } else {
+                            userPath = "/checkout";
+                            request.setAttribute("orderFailureFlag", true);
+                        }
+                    }
+                } else {
+                    request.getRequestDispatcher("/index.jsp").forward(request, response);
+                }
+                break;
         }
 
         // use RequestDispatcher to forward request internally
@@ -262,7 +282,7 @@ public class ControllerServlet extends HttpServlet {
 
         try {
             request.getRequestDispatcher(url).forward(request, response);
-        } catch (Exception ex) {
+        } catch (ServletException | IOException ex) {
             ex.printStackTrace();
         }
     }

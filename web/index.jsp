@@ -7,6 +7,11 @@
     SELECT * FROM category
 </sql:query>--%>
 
+<%-- Set session-scoped variable to track the view user is coming from.
+     This is used by the language mechanism in the Controller so that
+     users view the same page when switching between English and Czech. --%>
+<c:set var='view' value='/index' scope='session' />
+
 <div id="indexLeftColumn">
     <div id="welcomeText">
         <p style="font-size: larger"><fmt:message key='greeting'/></p>
