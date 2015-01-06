@@ -1,2 +1,2 @@
-AffableBean is the e-commerce learning Project from https://netbeans.org/kb/docs/javaee/ecommerce/intro.html
+AffableBean is the javaEE e-commerce learning project from https://netbeans.org/kb/docs/javaee/ecommerce/intro.html
 ===========
