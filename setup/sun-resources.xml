@@ -32,8 +32,13 @@
       validate-atmost-once-period-in-seconds="0" 
       wrap-jdbc-objects="false">
     
-      <property name="URL" value="jdbc:mysql://localhost:3306/affablebean?zeroDateTimeBehavior=convertToNull"/>
+    <property name="URL" value="jdbc:mysql://localhost:3306/affablebean?zeroDateTimeBehavior=convertToNull"/>
     <property name="User" value="root"/>
     <property name="Password" value="nbuser"/>
   </jdbc-connection-pool>
 </resources>
+
+<security-role-mapping>
+    <role-name>affableBeanAdmin</role-name>
+    <group-name>affableBeanAdmin</group-name>
+</security-role-mapping>

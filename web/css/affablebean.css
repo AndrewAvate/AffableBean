@@ -177,6 +177,9 @@ img {
     float: inherit;
 }
 
+/* Safari - disables underline for category boxes on index page */
+.categoryBox a { text-decoration: none }
+
 .categoryLabel {
     position: absolute;
     background-color: #fff;
@@ -362,13 +365,73 @@ img {
     padding: 0;
 }
 
-#deliverySurchargeCellRight { padding: 0 20px }
+#deliverySurchargeCellRight { 
+    padding: 0 20px;
+    white-space: nowrap;
+}
 
 #totalCellLeft {
     text-align: right;
     padding: 0;
 }
 
-#totalCellRight { padding: 0 20px }
+#totalCellRight { 
+    padding: 0 20px;
+    white-space: nowrap;
+}
 
 #dateProcessedRow { padding: 2px 0 10px 20px }
+
+
+
+
+/* admin styles */
+#adminLogo {
+    float:left;
+    margin-left: 30px;
+    margin-top: -20px;
+}
+
+#loginBox {
+    width: 300px;
+    margin: 0 auto;
+    border: solid 1px #f5eabe;
+    background-color: #f5eabe;
+    border-radius: 4px;
+}
+
+#adminMenu {
+    float: left;
+    width: 180px;
+    margin: 25px 5px 0 30px;
+    border: solid 1px #f5eabe;
+    background-color: #f5eabe;
+    border-radius: 4px;
+}
+
+#adminMenu p { margin-left: 15px }
+
+#adminTable {
+    width: 580px;
+    float: left;
+    table-layout: fixed;
+    background-color: #edf8f7;
+}
+
+#adminTable td { word-wrap:break-word; }
+
+.alignLeft { text-align: left }
+
+.selectedRow {
+    background-color: #c3e3e0;
+    cursor: pointer;
+}
+
+.noDecoration { text-decoration: none }
+
+.rigidWidth { width:200px }
+
+.embedded {
+    margin: 0;
+    border: none;
+}
